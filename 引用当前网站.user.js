@@ -1,11 +1,15 @@
 //==UserScript==
 // @name         引用当前网站
 // @namespace    Quote_this_site
-// @version      0.1
+// @version      0.2
 // @description  引用当前网站，自动生成符合参考文献著录规则的引用。
 // @author       You
 // @include      *
 // @grant        none
+// @homepageURL  https://github.com/CJJ-amateur-programmer/Quote_This_Website
+// @supportURL   https://github.com/CJJ-amateur-programmer/Quote_This_Website/issues
+// @updateURL    https://github.com/CJJ-amateur-programmer/Quote_This_Website/raw/main/引用当前网站.user.js
+// @downloadURL  https://github.com/CJJ-amateur-programmer/Quote_This_Website/raw/main/引用当前网站.user.js
 // @license      GPL-3.0
 //==/UserScript==
 (function() {
@@ -22,6 +26,20 @@
     function getMaxZIndex(){
         let arr=[...document.body.querySelectorAll("*")].map(e=>+window.getComputedStyle(e).zIndex||0);
         return arr.length?Math.max(...arr)+1:0;
+    }
+    function getDate(str){
+        var dates=str.match(/\d{6,8}/gm)||[],
+            y=new Date().getFullYear(),
+            y_sub=y.toString().substr(0,2);
+        for(var i=0;i<dates.length;i++){
+            if(dates[i].length==6){
+                dates[i]=y_sub+dates[i];
+            }
+            dates[i]=new Date(dates[i].replace(/(\d{4})(\d{2})(\d{2})/,(all,y,m,d)=>`${y}/${m}/${d}`)+" 0:00");
+        }
+        dates.sort((a,b)=>b-a);
+        while((dates[0]>new Date()||!dates[0]?.getTime())&&dates.shift());
+        return dates[0]?.toLocaleDateString('zh')?.replaceAll('/','-');
     }
     function getNewestDate(str){
         var dates=str.match(/(((\d{2}|\d{4})-)?\d{1,2}-\d{1,2})|(((\d{2}|\d{4})\/)?\d{1,2}\/\d{1,2})|(((\d{2}|\d{4})年)?\d{1,2}月\d{1,2}(?=日))/gm)||[],
@@ -169,10 +187,12 @@ quote-button:active{
     var edit_a=popup.querySelectorAll('[contenteditable="true"]'),
         q_btn=popup.querySelectorAll('[data-type]'),
         q_type_a=popup.querySelector('#quote_type'),
-        error_text={"quote_order":"请填写引用序号",
-                    "quote_name":"请填写网页名称和作者",
-                    "quote_title":"请填写网页内容标题",
-                    "edit_date":"请填写网页编辑日期"};
+        error_text={
+            "quote_order":"请填写引用序号",
+            "quote_name":"请填写网页名称和作者",
+            "quote_title":"请填写网页内容标题",
+            "edit_date":"请填写网页编辑日期"
+        };
     for(var i=0;i<edit_a.length;i++){
         edit_a[i].addEventListener("paste",function(e){
             e.preventDefault();
@@ -206,7 +226,7 @@ quote-button:active{
         edit_a[i].addEventListener("blur",function(){
             this.innerHTML=this.innerText.replaceAll("\n","");
             if(this.id=="edit_date"){
-                this.innerText=getNewestDate(this.innerText);
+                this.innerText=getDate(this.innerText)||getNewestDate(this.innerText);
             }else if(this.id=="quote_order"){
                 this.innerText=parseInt(this.innerText)||error_text[this.id];
             }else{
